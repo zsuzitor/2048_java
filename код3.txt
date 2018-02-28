@@ -1,0 +1,475 @@
+package com.example.sem_1;
+import android.app.Activity;
+import android.graphics.Color;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.TypedValue;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.view.View.OnTouchListener;
+import java.util.Random;
+import android.view.MotionEvent;
+import android.view.View;
+import static java.lang.Math.abs;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
+import android.content.DialogInterface.OnClickListener;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Bundle;
+
+public class MainActivity extends Activity implements OnTouchListener {
+    private int COUNT_lines_x=4;
+    private int COUNT_lines_y=4;
+    private float COORD_down_x=-1;
+    private float COORD_down_y=-1;
+    private float COORD_up_x=-1;
+    private float COORD_up_y=-1;
+    private One_block[][] matrix   = {{new One_block(),new One_block(),new One_block(),new One_block()},
+            {new One_block(),new One_block(),new One_block(),new One_block()},
+            {new One_block(),new One_block(),new One_block(),new One_block()},
+            {new One_block(),new One_block(),new One_block(),new One_block()}};
+private static final String TAG = "ShakeActivity";
+    private static final int SHAKE_SENSITIVITY = 10;
+    private SensorManager sensorManager;
+    private float accel = SensorManager.GRAVITY_EARTH;
+    private float accelPrevious = SensorManager.GRAVITY_EARTH;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        sensorManager.registerListener(sensorListener,
+                sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                SensorManager.SENSOR_DELAY_NORMAL);
+        Up_game();
+    }
+@Override
+protected void onResume() {
+    super.onResume();
+    sensorManager.registerListener(
+            sensorListener,
+            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+            SensorManager.SENSOR_DELAY_NORMAL);
+}
+    @Override
+    protected void onStop() {
+        sensorManager.unregisterListener(sensorListener);
+        super.onStop();
+    }
+    protected void onShake(){
+        Reload_game();
+    }
+    protected void Reload_game(){
+for(int i=0;i<COUNT_lines_x;++i){
+    for(int i1=0;i1<COUNT_lines_y;++i1){
+matrix[i][i1].Set_num(0);
+    }
+}
+Up_game();
+    }
+    private final SensorEventListener sensorListener = new SensorEventListener() {
+        public void onSensorChanged(SensorEvent sensorEvent) {
+            float x = sensorEvent.values[0];
+            float y = sensorEvent.values[1];
+            float z = sensorEvent.values[2];
+            accelPrevious = accel;
+            accel = (float) Math.sqrt((double) (x * x + y * y + z * z));
+            if (accel - accelPrevious > SHAKE_SENSITIVITY) {
+                onShake();
+            }
+        }
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        }
+    };
+    protected void Up_game() {
+        LinearLayout ll = new LinearLayout(this);
+        ll.setOrientation(LinearLayout.HORIZONTAL);
+        setContentView(ll);
+        LinearLayout[] Mass_x_layout=new LinearLayout[COUNT_lines_y];
+        for(int i=0;i<COUNT_lines_y;++i){
+            LinearLayout ll1 = new LinearLayout(this);
+            ll1.setOrientation(LinearLayout.VERTICAL);
+            ll.addView(ll1);
+            TextView tv1 = new TextView(this);
+            tv1.setWidth(10);//110
+            tv1.setHeight(800);//200
+            tv1.setText("");//
+            tv1.setId(i*COUNT_lines_y+99);
+            tv1.setBackgroundColor(Color.WHITE);
+            tv1.setOnTouchListener(this);
+            ll.addView(tv1);
+            Mass_x_layout[i]=ll1;
+        }
+        for(int i=0;i<COUNT_lines_x;++i){
+            for(int i1=0;i1<COUNT_lines_y;++i1){//
+                TextView tv1 = new TextView(this);
+                tv1.setWidth(170);//110
+                tv1.setHeight(200);//200
+                tv1.setText("");//
+                tv1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 30);
+                tv1.setId(i*COUNT_lines_y+i1);
+                tv1.setBackgroundColor(Color.GRAY);
+                tv1.setOnTouchListener(this);
+                Mass_x_layout[i].addView(tv1);
+                matrix[i][i1].Block=tv1;
+                TextView tv2 = new TextView(this);
+                tv2.setWidth(110);//110
+                tv2.setHeight(10);//200
+                tv2.setText("");
+                tv2.setBackgroundColor(Color.WHITE);
+                tv2.setOnTouchListener(this);
+                Mass_x_layout[i].addView(tv2);
+            }
+        }
+        Spawn_block();
+        Spawn_block();
+    }
+    protected void Spawn_block() {
+        Random rnd = new Random(System.currentTimeMillis());
+        boolean exit=true;
+        for(int i=0;i<COUNT_lines_x;++i){
+            for(int i1=0;i1<COUNT_lines_y;++i1){
+if(matrix[i1][i].Number==0){
+    exit=false;
+}
+            }
+        }
+        if(exit){
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("Хм")
+                    .setMessage("Вы проиграли")
+                    .setCancelable(false)
+                    .setNegativeButton("Ок",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+                                }
+                            });
+            AlertDialog alert = builder.create();
+            alert.show();
+        }
+        while(!exit){
+            int number =  rnd.nextInt(COUNT_lines_x*COUNT_lines_y);
+            int x=number/COUNT_lines_x;
+            int y=number%COUNT_lines_x;
+            if(x>=0&&y>=0&&x<COUNT_lines_x&&y<COUNT_lines_y){
+                if(matrix[y][x].Is_empty()){
+                    exit=true;
+                    matrix[y][x].Set_num(2);
+                }
+            }
+
+        }
+    }
+    protected boolean Shift_left() {
+        boolean res=false;
+        //смещает все цифры влево
+        for(int i=0;i<COUNT_lines_y;++i){
+            for(int i1=0;i1<COUNT_lines_x;++i1) {
+                if(matrix[i1][i].Number!=0){
+                    for(int i2=0;i2<i1;++i2) {
+                        if(matrix[i2][i].Number==0){
+                            matrix[i2][i].Set_num(matrix[i1][i].Number);
+                            matrix[i1][i].Set_num(0);
+                            res=true;
+                        }
+                    }
+                }
+            }
+        }
+        //складывает цифры слева
+        for(int i=0;i<COUNT_lines_y;++i){
+            for(int i1=0;i1<COUNT_lines_x-1;++i1){
+                if(matrix[i1][i].Number==matrix[i1+1][i].Number){
+                    if(matrix[i1][i].Number>0){
+                        matrix[i1][i].Set_num(matrix[i1][i].Number+matrix[i1+1][i].Number) ;
+                        matrix[i1+1][i].Set_num(0);
+                        for(int i2=i1+1;i2<COUNT_lines_x-1;++i2){
+                            matrix[i2][i].Set_num(matrix[i2+1][i].Number);
+                            matrix[i2+1][i].Set_num(0);
+                            res=true;
+                        }
+                    }
+                }
+            }
+        }
+        return res;
+    }
+    protected boolean Shift_right() {
+        boolean res=false;
+        //смещает все цифры вправо
+        for(int i=0;i<COUNT_lines_y;++i){
+            for(int i1=COUNT_lines_x-1;i1>=0;--i1) {
+                if(matrix[i1][i].Number!=0){
+                    for(int i2=COUNT_lines_x-1;i2>i1;--i2) {
+                        if(matrix[i2][i].Number==0){
+                            matrix[i2][i].Set_num(matrix[i1][i].Number);
+                            matrix[i1][i].Set_num(0);
+                            res=true;
+                        }
+                    }
+                }
+            }
+        }
+        for(int i=0;i<COUNT_lines_y;++i){
+            for(int i1=COUNT_lines_x-1;i1>0;--i1){
+                if(matrix[i1][i].Number==matrix[i1-1][i].Number){
+                    if(matrix[i1][i].Number>0) {
+                        matrix[i1][i].Set_num(matrix[i1][i].Number + matrix[i1 - 1][i].Number);
+                        matrix[i1 - 1][i].Set_num(0);
+                        for (int i2 = i1 - 1; i2 > 0; --i2) {
+                            matrix[i2][i].Set_num(matrix[i2 - 1][i].Number);
+                            matrix[i2 - 1][i].Set_num(0);
+                            res = true;
+                        }
+                    }
+                }
+            }
+        }
+return res;
+    }
+    protected boolean Shift_up() {
+        //смещает все цифры вверх
+boolean res=false;
+        for(int i=0;i<COUNT_lines_x;++i){//
+            for(int i1=0;i1<COUNT_lines_y;++i1) {//
+                if(matrix[i][i1].Number!=0){
+                    for(int i2=0;i2<i1;++i2) {
+                        if(matrix[i][i2].Number==0){
+                            matrix[i][i2].Set_num(matrix[i][i1].Number);
+                            matrix[i][i1].Set_num(0);
+                            res=true;
+                        }
+                    }
+                }
+            }
+        }
+        for(int i=0;i<COUNT_lines_x;++i){
+            for(int i1=0;i1<COUNT_lines_y-1;++i1){
+                if(matrix[i][i1].Number==matrix[i][i1+1].Number) {
+                    if (matrix[i][i1].Number > 0) {
+                        matrix[i][i1].Set_num(matrix[i][i1].Number + matrix[i][i1 + 1].Number);
+                        matrix[i][i1 + 1].Set_num(0);
+                        for (int i2 = i1 + 1; i2 < COUNT_lines_y - 1; ++i2) {
+                            matrix[i][i2].Set_num(matrix[i][i2 + 1].Number);
+                            matrix[i][i2 + 1].Set_num(0);
+                            res = true;
+                        }
+                    }
+                }
+            }
+        }
+
+return res;
+    }
+    protected boolean Shift_down() {
+        boolean res=false;
+        //смещает все цифры вниз
+        for(int i=0;i<COUNT_lines_x;++i){
+            for(int i1=COUNT_lines_y-1;i1>=0;--i1) {
+                if(matrix[i][i1].Number!=0){
+                    for(int i2=COUNT_lines_y-1;i2>i1;--i2) {
+                        if(matrix[i][i2].Number==0){
+                            matrix[i][i2].Set_num(matrix[i][i1].Number);
+                            matrix[i][i1].Set_num(0);
+                            res=true;
+                        }
+                    }
+                }
+            }
+        }
+        for(int i=0;i<COUNT_lines_x;++i){
+            for(int i1=COUNT_lines_y-1;i1>0;--i1){
+                if(matrix[i][i1].Number==matrix[i][i1-1].Number){
+                    if(matrix[i][i1].Number>0) {
+                        matrix[i][i1].Set_num(matrix[i][i1].Number + matrix[i][i1 - 1].Number);
+                        matrix[i][i1 - 1].Set_num(0);
+                        for (int i2 = i1 - 1; i2 > 0; --i2) {
+                            matrix[i][i2].Set_num(matrix[i][i2 - 1].Number);
+                            matrix[i][i2 - 1].Set_num(0);
+                            res = true;
+                        }
+                    }
+                }
+            }
+        }
+return res;
+    }
+    protected void exit() {
+        this.finish();
+    }
+    //определяет куда сдвигать и возващает направление
+    //up-1 right-2 down-3 left-4 stop=0
+    protected int Where_shift() {
+        int res=0;
+        float R_x=COORD_down_x-COORD_up_x;
+        float R_y=COORD_down_y-COORD_up_y;
+        if(abs(R_x)<abs(R_y)){
+            //сдвиг вверх или вниз
+            if(COORD_down_y>COORD_up_y){
+                res=1;
+            }
+            else{
+                res=3;
+            }
+        }
+        else{
+            //сдвиг вправо или влево
+            if(COORD_down_x>COORD_up_x){
+                res=4;
+            }
+            else{
+                res=2;
+            }
+        }
+        return res;
+    }
+    //сдвигает по направлению
+    protected void Shift(int sh) {
+        switch (sh) {
+            case 0:
+                break;
+            case 1:
+                if(Shift_up()){
+                    Spawn_block();
+                }
+                break;
+            case 2:
+                if(Shift_right()){
+                    Spawn_block();
+                }
+                break;
+            case 3:
+                if(Shift_down()){
+                    Spawn_block();
+                }
+                break;
+            case 4:
+                if(Shift_left()){
+                    Spawn_block();
+                }
+                break;
+        }
+    }
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        float x = event.getX();
+        float y= event.getY();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN: // нажатие
+                COORD_down_x=x;
+                COORD_down_y=y;
+                break;
+            case MotionEvent.ACTION_MOVE: // движение
+                break;
+            case MotionEvent.ACTION_UP: // отпускание
+            case MotionEvent.ACTION_CANCEL:
+                COORD_up_x=x;
+                COORD_up_y=y;
+                Shift(Where_shift());
+                COORD_down_x=-1;
+                COORD_down_y=-1;
+                COORD_up_x=-1;
+                COORD_up_y=-1;
+                break;
+        }
+        return true;
+    }
+    //--------------------------------class------------------------------
+    public class One_block{
+        public int Number=0;
+        public TextView Block;
+        public One_block(int num,TextView block){
+            Number=num;
+            Block=block;
+        }
+        public One_block(){
+            Number=0;
+        }
+        public boolean Is_empty(){
+            if(Number>0){
+                return false;
+            }
+            return  true;
+        }
+        public boolean Set_num(int value) {
+            if(Block!=null){
+                if(value==0){
+                    Number=0;
+                    Block.setText("");
+                }
+                else{
+                    Number=value;
+                    Block.setText(Integer.toString(value));
+                    if(value==2048){
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        builder.setTitle("Ура")
+                                .setMessage("Вы выиграли")
+                                .setCancelable(false)
+                                .setNegativeButton("Ок",
+                                        new DialogInterface.OnClickListener() {
+                                            public void onClick(DialogInterface dialog, int id) {
+                                                dialog.cancel();
+                                            }
+                                        });
+                        AlertDialog alert = builder.create();
+                        alert.show();
+                    }
+                }
+                Set_color(value);
+                return true;
+            }
+            return false;
+        }
+        private void Set_color(int value) {
+            switch (value){
+                case 0:
+                    Block.setBackgroundColor(Color.GRAY);
+                    break;
+                case 2:
+                    Block.setBackgroundColor(Color.WHITE);
+                    break;
+                case 4:
+                    Block.setBackgroundColor(Color.BLUE);
+                    break;
+                case 8:
+                    Block.setBackgroundColor(Color.CYAN);
+                    break;
+                case 16:
+                    Block.setBackgroundColor(Color.GREEN);
+                    break;
+                case 32:
+                    Block.setBackgroundColor(Color.MAGENTA);
+                    break;
+                case 64:
+                    Block.setBackgroundColor(Color.RED);
+                    break;
+                case 128:
+                    Block.setBackgroundColor(Color.YELLOW);
+                    break;
+                case 256:
+                    Block.setBackgroundColor(Color.rgb(232, 162, 162));
+                    break;
+                case 512:
+                    Block.setBackgroundColor(Color.LTGRAY);
+                    break;
+                case 1024:
+                    Block.setBackgroundColor(Color.DKGRAY);
+                    break;
+                case 2048:
+                    Block.setBackgroundColor(Color.BLACK);
+                    break;
+                    default:
+                        Block.setBackgroundColor(Color.BLACK);
+                        break;
+            }
+        }
+    }
+}
